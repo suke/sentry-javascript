@@ -7,7 +7,7 @@ git:
 #     - /^release\/.+$/
 #     - /^major\/.+$/
 
-# blah blah
+# blah blah blah
 
 install: yarn --ignore-engines
 os: linux
