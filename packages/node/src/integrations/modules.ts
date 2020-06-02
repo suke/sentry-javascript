@@ -21,6 +21,7 @@ function collectModules(): {
     let dir = path;
 
     /** Traverse directories upward in the search of package.json file */
+    // tslint:disable-next-line: invalid-void
     const updir = (): void | (() => void) => {
       const orig = dir;
       dir = dirname(orig);

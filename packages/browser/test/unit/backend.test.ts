@@ -6,7 +6,7 @@ let backend: BrowserBackend;
 
 describe('BrowserBackend', () => {
   describe('sendEvent()', () => {
-    it('should use NoopTransport', async () => {
+    it('should use NoopTransport', () => {
       backend = new BrowserBackend({});
       expect(backend.getTransport().constructor.name).to.equal('NoopTransport');
     });

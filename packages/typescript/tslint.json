@@ -18,6 +18,8 @@
     "ban-ts-ignore": false,
     "increment-decrement": false,
     "promise-function-async": false,
+    "strict-comparisons": false,
+    "no-for-in": false,
     "ban-types": [true, ["async", "Use Promises instead, it add a lot to bundle size."]],
     // These are too strict in tslint:all
     "comment-format": [true, "check-space"],

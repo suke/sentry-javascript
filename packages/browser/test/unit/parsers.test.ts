@@ -4,7 +4,7 @@ import { prepareFramesForEvent } from '../../src/parsers';
 
 describe('Parsers', () => {
   describe('prepareFramesForEvent()', () => {
-    describe('removed top frame if its internally reserved word (public API)', async () => {
+    describe('removed top frame if its internally reserved word (public API)', () => {
       it('reserved captureException', () => {
         const stack = [
           { context: ['x'], column: 1, line: 4, url: 'anything.js', func: 'captureException', args: [] },
@@ -36,7 +36,7 @@ describe('Parsers', () => {
       });
     });
 
-    describe('removed bottom frame if its internally reserved word (internal API)', async () => {
+    describe('removed bottom frame if its internally reserved word (internal API)', () => {
       it('reserved sentryWrapped', () => {
         const stack = [
           { context: ['x'], column: 1, line: 3, url: 'anything.js', func: 'foo', args: [] },
@@ -53,7 +53,7 @@ describe('Parsers', () => {
       });
     });
 
-    it('removed top and bottom frame if they are internally reserved words', async () => {
+    it('removed top and bottom frame if they are internally reserved words', () => {
       const stack = [
         { context: ['x'], column: 1, line: 4, url: 'anything.js', func: 'captureMessage', args: [] },
         { context: ['x'], column: 1, line: 3, url: 'anything.js', func: 'foo', args: [] },

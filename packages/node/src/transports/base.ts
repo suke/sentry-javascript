@@ -85,7 +85,9 @@ export abstract class BaseTransport implements Transport {
   /** JSDoc */
   protected async _sendWithModule(httpModule: HTTPRequest, event: Event): Promise<Response> {
     if (new Date(Date.now()) < this._disabledUntil) {
-      return Promise.reject(new SentryError(`Transport locked till ${this._disabledUntil} due to too many requests.`));
+      return Promise.reject(
+        new SentryError(`Transport locked till ${String(this._disabledUntil)} due to too many requests.`),
+      );
     }
 
     if (!this._buffer.isReady()) {
@@ -110,12 +112,12 @@ export abstract class BaseTransport implements Transport {
               let header = res.headers ? res.headers['Retry-After'] : '';
               header = Array.isArray(header) ? header[0] : header;
               this._disabledUntil = new Date(now + parseRetryAfterHeader(now, header));
-              logger.warn(`Too many requests, backing off till: ${this._disabledUntil}`);
+              logger.warn(`Too many requests, backing off till: ${String(this._disabledUntil)}`);
             }
 
             let rejectionMessage = `HTTP Error (${statusCode})`;
             if (res.headers && res.headers['x-sentry-error']) {
-              rejectionMessage += `: ${res.headers['x-sentry-error']}`;
+              rejectionMessage += `: ${String(res.headers['x-sentry-error'])}`;
             }
 
             reject(new SentryError(rejectionMessage));

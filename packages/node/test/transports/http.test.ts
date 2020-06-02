@@ -115,7 +115,9 @@ describe('HTTPTransport', () => {
       await transport.sendEvent({ message: 'test' });
     } catch (e) {
       expect(e).toEqual(
-        new SentryError(`Transport locked till ${new Date(now + retryAfterSeconds * 1000)} due to too many requests.`),
+        new SentryError(
+          `Transport locked till ${String(new Date(now + retryAfterSeconds * 1000))} due to too many requests.`,
+        ),
       );
     }
 

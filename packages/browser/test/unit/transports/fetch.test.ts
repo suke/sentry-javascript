@@ -32,7 +32,7 @@ describe('FetchTransport', () => {
     expect(transport.url).equal(transportUrl);
   });
 
-  describe('sendEvent()', async () => {
+  describe('sendEvent()', () => {
     it('sends a request to Sentry servers', async () => {
       const response = { status: 200 };
 
@@ -117,7 +117,7 @@ describe('FetchTransport', () => {
       } catch (res) {
         expect(res.status).equal(429);
         expect(res.reason).equal(
-          `Transport locked till ${new Date(now + retryAfterSeconds * 1000)} due to too many requests.`,
+          `Transport locked till ${String(new Date(now + retryAfterSeconds * 1000))} due to too many requests.`,
         );
       }
 

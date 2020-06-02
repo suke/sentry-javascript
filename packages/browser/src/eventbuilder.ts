@@ -71,7 +71,7 @@ export function eventFromUnknownInput(
   //
   // So bail out and capture it as a simple message:
   event = eventFromString(exception as string, syntheticException, options);
-  addExceptionTypeValue(event, `${exception}`, undefined);
+  addExceptionTypeValue(event, `${String(exception)}`, undefined);
   addExceptionMechanism(event, {
     synthetic: true,
   });

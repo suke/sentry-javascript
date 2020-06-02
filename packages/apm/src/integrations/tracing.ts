@@ -205,7 +205,7 @@ export class Tracing implements Integration {
       logger.warn(
         '[Tracing] You need to define `tracingOrigins` in the options. Set an array of urls or patterns to trace.',
       );
-      logger.warn(`[Tracing] We added a reasonable default for you: ${defaultTracingOrigins}`);
+      logger.warn(`[Tracing] We added a reasonable default for you: ${String(defaultTracingOrigins)}`);
     }
 
     // Starting pageload transaction

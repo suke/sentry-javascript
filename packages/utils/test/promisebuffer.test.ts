@@ -24,7 +24,7 @@ describe('PromiseBuffer', () => {
     });
   });
 
-  test('resolved promises should not show up in buffer length', async () => {
+  test('resolved promises should not show up in buffer length', () => {
     expect.assertions(2);
     const q = new PromiseBuffer<void>();
     const p = new SyncPromise<void>(resolve => setTimeout(resolve, 1));
@@ -35,7 +35,7 @@ describe('PromiseBuffer', () => {
     jest.runAllTimers();
   });
 
-  test('receive promise result outside and from buffer', async () => {
+  test('receive promise result outside and from buffer', () => {
     expect.assertions(4);
     const q = new PromiseBuffer<string>();
     const p = new SyncPromise<string>(resolve =>
@@ -54,7 +54,7 @@ describe('PromiseBuffer', () => {
     jest.runAllTimers();
   });
 
-  test('drain()', async () => {
+  test('drain()', () => {
     expect.assertions(3);
     const q = new PromiseBuffer<void>();
     for (let i = 0; i < 5; i++) {
@@ -69,7 +69,7 @@ describe('PromiseBuffer', () => {
     jest.runAllTimers();
   });
 
-  test('drain() with timeout', async () => {
+  test('drain() with timeout', () => {
     expect.assertions(2);
     const q = new PromiseBuffer<void>();
     for (let i = 0; i < 5; i++) {
@@ -83,7 +83,7 @@ describe('PromiseBuffer', () => {
     jest.runAllTimers();
   });
 
-  test('drain() on empty buffer', async () => {
+  test('drain() on empty buffer', () => {
     expect.assertions(3);
     const q = new PromiseBuffer<void>();
     expect(q.length()).toBe(0);

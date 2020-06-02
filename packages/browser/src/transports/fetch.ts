@@ -18,7 +18,7 @@ export class FetchTransport extends BaseTransport {
     if (new Date(Date.now()) < this._disabledUntil) {
       return Promise.reject({
         event,
-        reason: `Transport locked till ${this._disabledUntil} due to too many requests.`,
+        reason: `Transport locked till ${String(this._disabledUntil)} due to too many requests.`,
         status: 429,
       });
     }
@@ -54,7 +54,7 @@ export class FetchTransport extends BaseTransport {
             if (status === Status.RateLimit) {
               const now = Date.now();
               this._disabledUntil = new Date(now + parseRetryAfterHeader(now, response.headers.get('Retry-After')));
-              logger.warn(`Too many requests, backing off till: ${this._disabledUntil}`);
+              logger.warn(`Too many requests, backing off till: ${String(this._disabledUntil)}`);
             }
 
             reject(response);

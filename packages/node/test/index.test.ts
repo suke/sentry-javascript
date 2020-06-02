@@ -32,7 +32,7 @@ describe('SentryNode', () => {
   });
 
   describe('getContext() / setContext()', () => {
-    test('store/load extra', async () => {
+    test('store/load extra', () => {
       configureScope((scope: Scope) => {
         scope.setExtra('abc', { def: [1] });
       });
@@ -41,7 +41,7 @@ describe('SentryNode', () => {
       });
     });
 
-    test('store/load tags', async () => {
+    test('store/load tags', () => {
       configureScope((scope: Scope) => {
         scope.setTag('abc', 'def');
       });
@@ -50,7 +50,7 @@ describe('SentryNode', () => {
       });
     });
 
-    test('store/load user', async () => {
+    test('store/load user', () => {
       configureScope((scope: Scope) => {
         scope.setUser({ id: 'def' });
       });
@@ -61,7 +61,7 @@ describe('SentryNode', () => {
   });
 
   describe('breadcrumbs', () => {
-    let s: jest.Mock<(event: Event) => void>;
+    let s: jest.Mock<void, [Event]>;
 
     beforeEach(() => {
       s = jest.spyOn(NodeBackend.prototype, 'sendEvent').mockImplementation(async () => Promise.resolve({ code: 200 }));
@@ -90,7 +90,7 @@ describe('SentryNode', () => {
   });
 
   describe('capture', () => {
-    let s: jest.Mock<(event: Event) => void>;
+    let s: jest.Mock<void, [Event]>;
 
     beforeEach(() => {
       s = jest.spyOn(NodeBackend.prototype, 'sendEvent').mockImplementation(async () => Promise.resolve({ code: 200 }));

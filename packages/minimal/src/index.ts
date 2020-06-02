@@ -77,7 +77,7 @@ export function captureEvent(event: Event): string {
  * @param callback Callback function that receives Scope.
  */
 export function configureScope(callback: (scope: Scope) => void): void {
-  callOnHub<void>('configureScope', callback);
+  callOnHub<any>('configureScope', callback);
 }
 
 /**
@@ -89,7 +89,7 @@ export function configureScope(callback: (scope: Scope) => void): void {
  * @param breadcrumb The breadcrumb to record.
  */
 export function addBreadcrumb(breadcrumb: Breadcrumb): void {
-  callOnHub<void>('addBreadcrumb', breadcrumb);
+  callOnHub<any>('addBreadcrumb', breadcrumb);
 }
 
 /**
@@ -98,7 +98,7 @@ export function addBreadcrumb(breadcrumb: Breadcrumb): void {
  * @param context Any kind of data. This data will be normalized.
  */
 export function setContext(name: string, context: { [key: string]: any } | null): void {
-  callOnHub<void>('setContext', name, context);
+  callOnHub<any>('setContext', name, context);
 }
 
 /**
@@ -106,7 +106,7 @@ export function setContext(name: string, context: { [key: string]: any } | null)
  * @param extras Extras object to merge into current context.
  */
 export function setExtras(extras: { [key: string]: any }): void {
-  callOnHub<void>('setExtras', extras);
+  callOnHub<any>('setExtras', extras);
 }
 
 /**
@@ -114,7 +114,7 @@ export function setExtras(extras: { [key: string]: any }): void {
  * @param tags Tags context object to merge into current context.
  */
 export function setTags(tags: { [key: string]: string }): void {
-  callOnHub<void>('setTags', tags);
+  callOnHub<any>('setTags', tags);
 }
 
 /**
@@ -124,7 +124,7 @@ export function setTags(tags: { [key: string]: string }): void {
  */
 
 export function setExtra(key: string, extra: any): void {
-  callOnHub<void>('setExtra', key, extra);
+  callOnHub<any>('setExtra', key, extra);
 }
 
 /**
@@ -133,7 +133,7 @@ export function setExtra(key: string, extra: any): void {
  * @param value String value of tag
  */
 export function setTag(key: string, value: string): void {
-  callOnHub<void>('setTag', key, value);
+  callOnHub<any>('setTag', key, value);
 }
 
 /**
@@ -142,7 +142,7 @@ export function setTag(key: string, value: string): void {
  * @param user User context object to be set in the current context. Pass `null` to unset the user.
  */
 export function setUser(user: User | null): void {
-  callOnHub<void>('setUser', user);
+  callOnHub<any>('setUser', user);
 }
 
 /**
@@ -159,7 +159,7 @@ export function setUser(user: User | null): void {
  * @param callback that will be enclosed into push/popScope.
  */
 export function withScope(callback: (scope: Scope) => void): void {
-  callOnHub<void>('withScope', callback);
+  callOnHub<any>('withScope', callback);
 }
 
 /**
@@ -173,7 +173,7 @@ export function withScope(callback: (scope: Scope) => void): void {
  * @hidden
  */
 export function _callOnClient(method: string, ...args: any[]): void {
-  callOnHub<void>('_invokeClient', method, ...args);
+  callOnHub<any>('_invokeClient', method, ...args);
 }
 
 /**
