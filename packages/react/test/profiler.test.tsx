@@ -3,6 +3,7 @@ import { renderHook } from '@testing-library/react-hooks';
 import * as React from 'react';
 
 import { UNKNOWN_COMPONENT, useProfiler, withProfiler } from '../src/profiler';
+import { Span } from '@sentry/types';
 
 const mockPushActivity = jest.fn().mockReturnValue(1);
 const mockPopActivity = jest.fn();
@@ -29,6 +30,7 @@ jest.mock('@sentry/browser', () => ({
         public setupOnce: () => void = jest.fn();
         public static pushActivity: () => void = mockPushActivity;
         public static popActivity: () => void = mockPopActivity;
+        public static getActivity: () => Span = jest.fn().mockReturnValue({ span: { id: 'sldjflsf' } });
       }
 
       if (!integrationIsNull) {

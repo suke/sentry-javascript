@@ -1,6 +1,6 @@
 import { getCurrentHub } from '@sentry/browser';
-import { Integration, IntegrationClass } from '@sentry/types';
-import { logger } from '@sentry/utils';
+import { Integration, IntegrationClass, Span } from '@sentry/types';
+import { logger, timestampWithMs } from '@sentry/utils';
 import * as hoistNonReactStatic from 'hoist-non-react-statics';
 import * as React from 'react';
 
@@ -9,11 +9,6 @@ export const UNKNOWN_COMPONENT = 'unknown';
 const TRACING_GETTER = ({
   id: 'Tracing',
 } as any) as IntegrationClass<Integration>;
-
-// https://stackoverflow.com/questions/52702466/detect-react-reactdom-development-production-build
-function isReactInDevMode(): boolean {
-  return '_self' in React.createElement('div');
-}
 
 /**
  *
@@ -44,103 +39,100 @@ function afterNextFrame(callback: Function): void {
   timeout = window.setTimeout(done, 100);
 }
 
-let profilerCount = 0;
+function warnAboutTracing(name: string): void {
+  logger.warn(
+    `Unable to profile component ${name} due to invalid Tracing Integration. Please make sure to setup the Tracing integration.`,
+  );
+}
 
-const profiledComponents: {
-  [key: string]: number;
-} = {};
-
-/**
- * getInitActivity pushes activity based on React component mount
- * @param name displayName of component that started activity
- */
-const getInitActivity = (name: string): number | null => {
-  const tracingIntegration = getCurrentHub().getIntegration(TRACING_GETTER);
-
-  if (tracingIntegration === null) {
-    logger.warn(
-      `Unable to profile component ${name} due to invalid Tracing Integration. Please make sure to setup the Tracing integration.`,
-    );
-
-    return null;
-  }
-
-  // tslint:disable-next-line:no-unsafe-any
-  const activity = (tracingIntegration as any).constructor.pushActivity(name, {
-    description: `<${name}>`,
-    op: 'react',
-  }) as number;
-
-  /**
-   * If an activity was already generated, this the component is in React.StrictMode.
-   * React.StrictMode will call constructors and setState hooks twice, effectively
-   * creating redundant spans for every render (ex. two <App /> spans, two <Link /> spans)
-   *
-   * React.StrictMode only has this behaviour in Development Mode
-   * See: https://reactjs.org/docs/strict-mode.html
-   *
-   * To account for this, we track all profiled components, and cancel activities that
-   * we recognize to be coming from redundant push activity calls. It is important to note
-   * that it is the first call to push activity that is invalid, as that is the one caused
-   * by React.StrictMode.
-   *
-   */
-  if (isReactInDevMode()) {
-    // We can make the guarantee here that if a redundant activity exists, it comes right
-    // before the current activity, hence having a profilerCount one less than the existing count.
-    const redundantActivity = profiledComponents[`${name}${profilerCount - 1}`];
-
-    if (redundantActivity) {
-      // tslint:disable-next-line: no-unsafe-any
-      (tracingIntegration as any).constructor.cancelActivity(redundantActivity);
-    } else {
-      // If an redundant activity didn't exist, we can store the current activity to
-      // check later. We have to do this inside an else block because of the case of
-      // the edge case where two components may share a single components name.
-      profiledComponents[`${name}${profilerCount}`] = activity;
-    }
-  }
-
-  profilerCount += 1;
-  return activity;
-};
+enum ReactOp {
+  Mount = 'mount',
+  Visible = 'visible',
+}
 
 export type ProfilerProps = {
   name: string;
 };
 
 class Profiler extends React.Component<ProfilerProps> {
-  public activity: number | null;
+  public tracingIntegration: Integration | null = getCurrentHub().getIntegration(TRACING_GETTER);
+  public mountInfo: {
+    activity: number | null;
+    span: Span | null;
+  } = {
+    activity: null,
+    span: null,
+  };
+  public visibleActivity: number | null = null;
 
   public constructor(props: ProfilerProps) {
     super(props);
 
-    this.activity = getInitActivity(this.props.name);
+    if (this.tracingIntegration === null) {
+      warnAboutTracing(props.name);
+    } else {
+      // tslint:disable-next-line:no-unsafe-any
+      const activity = (this.tracingIntegration as any).constructor.pushActivity(props.name, {
+        data: {
+          update: 0,
+        },
+        description: `<${props.name}>`,
+        op: `react.${ReactOp.Mount}`,
+      }) as number;
+
+      if (activity) {
+        this.mountInfo.activity = activity;
+        // tslint:disable-next-line: no-unsafe-any
+        this.mountInfo.span = (this.tracingIntegration as any).constructor.getActivitySpan(activity);
+      }
+    }
   }
 
   // If a component mounted, we can finish the mount activity.
   public componentDidMount(): void {
-    afterNextFrame(this.finishProfile);
+    afterNextFrame(() => {
+      if (this.tracingIntegration === null) {
+        return;
+      }
+
+      if (this.mountInfo.activity) {
+        // tslint:disable-next-line:no-unsafe-any
+        (this.tracingIntegration as any).constructor.popActivity(this.mountInfo.activity);
+        this.mountInfo.activity = null;
+      }
+
+      if (this.mountInfo.span) {
+        // tslint:disable-next-line:no-unsafe-any
+        this.visibleActivity = (this.tracingIntegration as any).constructor.pushActivity(
+          this.props.name,
+          {
+            description: `<${this.props.name}>`,
+            op: `react.${ReactOp.Visible}`,
+          },
+          { parentSpanId: this.mountInfo.span.spanId, canBeCancelled: true },
+        ) as number;
+      }
+    });
   }
 
-  // Sometimes a component will unmount first, so we make
-  // sure to also finish the mount activity here.
-  public componentWillUnmount(): void {
-    afterNextFrame(this.finishProfile);
-  }
-
-  public finishProfile = () => {
-    if (!this.activity) {
-      return;
-    }
-
-    const tracingIntegration = getCurrentHub().getIntegration(TRACING_GETTER);
-    if (tracingIntegration !== null) {
+  public componentDidUpdate(): void {
+    if (this.tracingIntegration !== null && this.mountInfo.span && this.mountInfo.span.data.update) {
       // tslint:disable-next-line:no-unsafe-any
-      (tracingIntegration as any).constructor.popActivity(this.activity);
-      this.activity = null;
+      this.mountInfo.span.setData('update', (this.mountInfo.span.data.update += 1));
     }
-  };
+  }
+
+  // If a component doesn't mount, the visible activity will be end when the
+  // transaction ends.
+  public componentWillUnmount(): void {
+    afterNextFrame(() => {
+      if (this.visibleActivity && this.tracingIntegration !== null) {
+        // tslint:disable-next-line:no-unsafe-any
+        (this.tracingIntegration as any).constructor.popActivity(this.visibleActivity);
+        this.visibleActivity = null;
+      }
+    });
+  }
 
   public render(): React.ReactNode {
     return this.props.children;
@@ -179,14 +171,59 @@ function withProfiler<P extends object>(WrappedComponent: React.ComponentType<P>
  * @param name displayName of component being profiled
  */
 function useProfiler(name: string): void {
-  const [activity] = React.useState(() => getInitActivity(name));
+  const [mountActivity] = React.useState(() => {
+    const tracingIntegration = getCurrentHub().getIntegration(TRACING_GETTER);
+
+    if (tracingIntegration !== null) {
+      // tslint:disable-next-line: no-unsafe-any
+      return (tracingIntegration as any).constructor.pushActivity(name, {
+        description: `<${name}>`,
+        op: `react.${ReactOp.Mount}`,
+        startTimestamp: timestampWithMs(),
+      }) as number;
+    }
+
+    warnAboutTracing(name);
+    return null;
+  });
+
+  const [visibleActivity] = React.useState(() => {
+    const tracingIntegration = getCurrentHub().getIntegration(TRACING_GETTER);
+
+    if (tracingIntegration !== null) {
+      // tslint:disable-next-line: no-unsafe-any
+      return (tracingIntegration as any).constructor.pushActivity(
+        name,
+        {
+          description: `<${name}>`,
+          op: `react.${ReactOp.Visible}`,
+          startTimestamp: timestampWithMs(),
+        },
+        { autoPopAfter: 0 },
+      ) as number;
+    }
+
+    warnAboutTracing(name);
+    return null;
+  });
 
   React.useEffect(() => {
     afterNextFrame(() => {
       const tracingIntegration = getCurrentHub().getIntegration(TRACING_GETTER);
+
       if (tracingIntegration !== null) {
         // tslint:disable-next-line:no-unsafe-any
-        (tracingIntegration as any).constructor.popActivity(activity);
+        (tracingIntegration as any).constructor.popActivity(mountActivity);
+      }
+    });
+
+    // tslint:disable-next-line: no-void-expression
+    return afterNextFrame(() => {
+      const tracingIntegration = getCurrentHub().getIntegration(TRACING_GETTER);
+
+      if (tracingIntegration !== null) {
+        // tslint:disable-next-line:no-unsafe-any
+        (tracingIntegration as any).constructor.popActivity(visibleActivity);
       }
     });
   }, []);

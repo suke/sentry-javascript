@@ -113,11 +113,11 @@ export interface TracingOptions {
 interface Activity {
   name: string;
   span?: Span;
+  canBeCancelled?: boolean;
 }
 
 const global = getGlobalObject<Window>();
 const defaultTracingOrigins = ['localhost', /^\//];
-const SPAN_IGNORE_KEY = '__sentry_delete_span';
 
 /**
  * Tracing Integration
@@ -476,11 +476,6 @@ export class Tracing implements Integration {
             return span;
           }
 
-          // if a span is supposed to be ignored, don't add it to the transaction
-          if (span.data[SPAN_IGNORE_KEY]) {
-            return false;
-          }
-
           // We cancel all pending spans with status "cancelled" to indicate the idle transaction was finished early
           if (!span.endTimestamp) {
             span.endTimestamp = endTimestamp;
@@ -776,12 +771,15 @@ export class Tracing implements Integration {
    * @param name Name of the activity, can be any string (Only used internally to identify the activity)
    * @param spanContext If provided a Span with the SpanContext will be created.
    * @param options _autoPopAfter_ | Time in ms, if provided the activity will be popped automatically after this timeout. This can be helpful in cases where you cannot gurantee your application knows the state and calls `popActivity` for sure.
+   * @param options _parentSpanId_ | Set a custom parent span id for the activity's span.
    */
   public static pushActivity(
     name: string,
     spanContext?: SpanContext,
     options?: {
       autoPopAfter?: number;
+      parentSpanId?: string;
+      canBeCancelled?: boolean;
     },
   ): number {
     const activeTransaction = Tracing._activeTransaction;
@@ -796,7 +794,11 @@ export class Tracing implements Integration {
       const hub = _getCurrentHub();
       if (hub) {
         const span = activeTransaction.startChild(spanContext);
+        if (options && options.parentSpanId) {
+          span.parentSpanId = options.parentSpanId;
+        }
         Tracing._activities[Tracing._currentIndex] = {
+          canBeCancelled: options && options.canBeCancelled,
           name,
           span,
         };
@@ -858,11 +860,12 @@ export class Tracing implements Integration {
       delete Tracing._activities[id];
     }
 
-    const count = Object.keys(Tracing._activities).length;
+    const activities = Object.values(Tracing._activities);
+    const cancelledActivities = activities.filter(({ canBeCancelled }) => !!canBeCancelled);
 
-    Tracing._log('[Tracing] activies count', count);
+    Tracing._log('[Tracing] activies count', activities.length);
 
-    if (count === 0 && Tracing._activeTransaction) {
+    if ((activities.length === 0 || activities.length === cancelledActivities.length) && Tracing._activeTransaction) {
       const timeout = Tracing.options && Tracing.options.idleTimeout;
       Tracing._log(`[Tracing] Flushing Transaction in ${timeout}ms`);
       // We need to add the timeout here to have the real endtimestamp of the transaction
@@ -875,28 +878,20 @@ export class Tracing implements Integration {
   }
 
   /**
-   * Cancels an activity if it exists
+   * Get span based on activity id
    */
-  public static cancelActivity(id: number): void {
+  public static getActivitySpan(id: number): Span | undefined {
     if (!id) {
-      return;
+      return undefined;
     }
+    if (Tracing._getCurrentHub) {
+      const hub = Tracing._getCurrentHub();
 
-    const activity = Tracing._activities[id];
-
-    if (activity) {
-      Tracing._log(`[Tracing] cancelActivity ${activity.name}#${id}`);
-      if (activity.span) {
-        // Ignore the span in the transaction
-        activity.span.setData(SPAN_IGNORE_KEY, true);
+      if (hub) {
+        return Tracing._activities[id].span;
       }
-
-      // tslint:disable-next-line: no-dynamic-delete
-      delete Tracing._activities[id];
-
-      const count = Object.keys(Tracing._activities).length;
-      Tracing._log('[Tracing] activies count', count);
     }
+    return undefined;
   }
 }
 
