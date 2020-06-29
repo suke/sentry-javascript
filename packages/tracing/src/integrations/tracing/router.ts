@@ -46,20 +46,29 @@ export interface TracingRouterOptions {
 }
 
 /** JSDOC */
-export class TracingRouter {
+export interface RoutingInstrumentation<T> {
+  options: Partial<T>;
+  /**
+   * init the routing instrumentation
+   */
+  init(hub: Hub, idleTimeout: number): void;
+}
+
+/** JSDOC */
+export class TracingRouter implements RoutingInstrumentation<TracingRouterOptions> {
   /** JSDoc */
   public options: Partial<TracingRouterOptions> = {};
 
   private _activeTransaction?: Transaction;
 
-  public constructor(_options?: Partial<TracingRouterOptions>) {
+  public constructor(_options?: TracingRouterOptions) {
     if (_options) {
       this.options = _options;
     }
   }
 
   /** JSDOC */
-  public startIdleTransaction(hub: Hub, op: string, idleTimeout: number): Transaction | undefined {
+  private _startIdleTransaction(hub: Hub, op: string, idleTimeout: number): Transaction | undefined {
     if (!global || !global.location || !hub) {
       return undefined;
     }
@@ -97,7 +106,7 @@ export class TracingRouter {
    */
   public init(hub: Hub, idleTimeout: number): void {
     if (this.options.startTransactionOnPageLoad) {
-      this._activeTransaction = this.startIdleTransaction(hub, 'pageload', idleTimeout);
+      this._activeTransaction = this._startIdleTransaction(hub, 'pageload', idleTimeout);
     }
 
     addInstrumentationHandler({
@@ -106,7 +115,7 @@ export class TracingRouter {
           if (this._activeTransaction) {
             this._activeTransaction.finish(timestampWithMs());
           }
-          this._activeTransaction = this.startIdleTransaction(hub, 'navigation', idleTimeout);
+          this._activeTransaction = this._startIdleTransaction(hub, 'navigation', idleTimeout);
         }
       },
       type: 'history',
