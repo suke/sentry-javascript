@@ -50,6 +50,8 @@ export class TracingRouter {
   /** JSDoc */
   public options: Partial<TracingRouterOptions> = {};
 
+  private _activeTransaction?: Transaction;
+
   public constructor(_options?: Partial<TracingRouterOptions>) {
     if (_options) {
       this.options = _options;
@@ -72,7 +74,7 @@ export class TracingRouter {
       }
     }
 
-    const transaction = hub.startTransaction(
+    this._activeTransaction = hub.startTransaction(
       {
         name,
         op,
@@ -83,9 +85,9 @@ export class TracingRouter {
 
     // We set the transaction here on the scope so error events pick up the trace
     // context and attach it to the error.
-    hub.configureScope(scope => scope.setSpan(transaction));
+    hub.configureScope(scope => scope.setSpan(this._activeTransaction));
 
-    return transaction;
+    return this._activeTransaction;
   }
 
   /**
@@ -95,57 +97,19 @@ export class TracingRouter {
    */
   public init(hub: Hub, idleTimeout: number): void {
     if (this.options.startTransactionOnPageLoad) {
-      this.startIdleTransaction(hub, 'pageload', idleTimeout);
+      this._activeTransaction = this.startIdleTransaction(hub, 'pageload', idleTimeout);
     }
 
     addInstrumentationHandler({
       callback: () => {
         if (this.options.startTransactionOnLocationChange) {
-          this.startIdleTransaction(hub, 'navigation', idleTimeout);
+          if (this._activeTransaction) {
+            this._activeTransaction.finish(timestampWithMs());
+          }
+          this._activeTransaction = this.startIdleTransaction(hub, 'navigation', idleTimeout);
         }
       },
       type: 'history',
     });
   }
-
-  /** JSDOC */
-  // public static setup(hub: Hub, idleTimeout: number): void {
-  //   addInstrumentationHandler({
-  //     callback: () => {
-  //       if (hub) {
-  //         const scope = hub.getScope();
-  //         if (scope) {
-  //           const activeTransaction = scope.getTransaction();
-  //           if (activeTransaction) {
-  //             activeTransaction.finish(timestampWithMs());
-  //           }
-  //         }
-
-  //         if (global && global.location) {
-  //           TracingRouter.startIdleTransaction(hub, 'pageload');
-  //         }
-  //       }
-  //     },
-  //     type: 'history',
-  //   });
-  // }
-
-  // /** JSDOC */
-  // public static init(hub: Hub, idleTimeout: number): Transaction | undefined {
-  //   TracingRouter._idleTimeout = idleTimeout;
-  //   return TracingRouter.startIdleTransaction(hub, 'pageload', idleTimeout);
-  // }
 }
-
-// /**
-//  * Creates transaction from navigation changes
-//  */
-// function historyCallback(_: { [key: string]: any }): void {
-//   if (Tracing.options.startTransactionOnLocationChange && global && global.location) {
-//     Tracing.finishIdleTransaction(timestampWithMs());
-//     Tracing.startIdleTransaction({
-//       name: Tracing.options.beforeNavigate(window.location),
-//       op: 'navigation',
-//     });
-//   }
-// }

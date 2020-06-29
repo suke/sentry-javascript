@@ -8,6 +8,35 @@ import { Transaction } from '../transaction';
 import { TracingRouter, TracingRouterOptions } from './tracing/router';
 
 /**
+ * TODO: Figure out Tracing._resetActiveTransaction()
+ * TODO: Figure out Tracing.finishIdleTransaction()
+ *  - This might be that we monkeypatch it here?
+ *  - Ex. say _activeTransaction.finish = () => { finish() and something }
+ *  - BrowserTracing wants to hook onto idleTransaction lifecyle, do something before and after
+ *  - Should we expose lifecycle hooks?
+ *
+ * Ex. Router starts a transaction
+ * - we then have a function, onCreate() there?
+ * - we also pass in a onFinish() there?
+ * - I like this because the router is concerned with the pageload/navigation
+ * - So react router or angular router would extend TracingRouter, and not worry about
+ * - onFinish or onCreate
+ * - Actually NO -> this shouldn't work like this
+ *
+ * - These spans should be on any active transaction right?
+ * - The whole point of this is that we should see stuff like
+ * - performance marks on any transaction that is on the scope
+ * - So we have to be able to register listeners here somehow?
+ * - a global "beforeFinish" transaction
+ * - This could also be where a user can manually filter to make a nil transaction
+ * - Like beforeSend, we have beforeFinish for transactions
+ *
+ * - Here is how this helps us:
+ *  -> we register all our callbacks either at pageload, or on a beforeFinish
+ *  -> beforeFinish, we can then make some all the spans have performance marks etc.
+ */
+
+/**
  * Options for Browser Tracing integration
  */
 export type BrowserTracingOptions = {
@@ -73,8 +102,6 @@ export class BrowserTracing implements Integration {
    */
   private static _getCurrentHub?: () => Hub;
 
-  private static _activeTransaction?: Transaction;
-
   public constructor(_options?: Partial<BrowserTracingOptions>) {
     const defaults = {
       beforeNavigate(name: string): string | null {
@@ -98,43 +125,12 @@ export class BrowserTracing implements Integration {
   }
 
   /**
-   * Start an idle transaction.
-   */
-  public static startIdleTransaction(transactionContext: TransactionContext): Transaction | undefined {
-    const _getCurrentHub = BrowserTracing._getCurrentHub;
-    if (!_getCurrentHub) {
-      return undefined;
-    }
-
-    const hub = _getCurrentHub();
-    if (!hub) {
-      return undefined;
-    }
-
-    BrowserTracing._activeTransaction = hub.startTransaction(
-      {
-        trimEnd: true,
-        ...transactionContext,
-      },
-      BrowserTracing.options && BrowserTracing.options.idleTimeout,
-    ) as Transaction;
-
-    // We set the transaction here on the scope so error events pick up the trace context and attach it to the error
-    hub.configureScope(scope => scope.setSpan(BrowserTracing._activeTransaction));
-
-    return BrowserTracing._activeTransaction;
-  }
-
-  /**
    * @inheritDoc
    */
   public setupOnce(addGlobalEventProcessor: (callback: EventProcessor) => void, getCurrentHub: () => Hub): void {
     BrowserTracing._getCurrentHub = getCurrentHub;
 
     const hub = getCurrentHub();
-    if (BrowserTracing.options && BrowserTracing.options.startTransactionOnPageLoad) {
-      TracingRouter.startPageloadTransaction(hub, BrowserTracing.options.idleTimeout);
-    }
 
     // This EventProcessor makes sure that the transaction is not longer than maxTransactionDuration
     addGlobalEventProcessor((event: Event) => {
