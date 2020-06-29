@@ -84,7 +84,7 @@ function startSpan(this: Hub, context: SpanContext): Transaction | Span {
 }
 
 /**
- * This patches the global object and injects the APM extensions methods
+ * This patches the global object and injects the Tracing extensions methods
  */
 export function addExtensionMethods(): void {
   const carrier = getMainCarrier();
