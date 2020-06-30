@@ -5,7 +5,12 @@ import { logger, safeJoin } from '@sentry/utils';
 import { SpanStatus } from '../spanstatus';
 import { Transaction } from '../transaction';
 
-import { TracingRouter, TracingRouterOptions, RoutingInstrumentation } from './tracing/router';
+import {
+  RoutingInstrumentationClass,
+  RoutingInstrumentation,
+  TracingRouterOptions,
+  TracingRouter,
+} from './tracing/router';
 
 /**
  * TODO: Figure out Tracing._resetActiveTransaction()
@@ -77,9 +82,7 @@ export type BrowserTracingOptions = {
     writeAsBreadcrumbs: boolean;
     spanDebugTimingInfo: boolean;
   };
-
-  router: RoutingInstrumentation<Record<string, any>>;
-} & TracingRouterOptions;
+};
 
 const defaultTracingOrigins = ['localhost', /^\//];
 
@@ -105,23 +108,22 @@ export class BrowserTracing implements Integration {
   private static _getCurrentHub?: () => Hub;
 
   public constructor(_options?: Partial<BrowserTracingOptions & TracingRouterOptions>) {
-    const routerDefaults = {
-      beforeNavigate(name: string): string | null {
-        return name;
-      },
-      idleTimeout: 500,
-      startTransactionOnLocationChange: true,
-      startTransactionOnPageLoad: true,
-    };
+    // const routerDefaults = {
+    //   beforeNavigate(name: string): string | null {
+    //     return name;
+    //   },
+    //   idleTimeout: 500,
+    //   startTransactionOnLocationChange: true,
+    //   startTransactionOnPageLoad: true,
+    // };
+
     const defaults = {
-      ...routerDefaults,
       debug: {
         spanDebugTimingInfo: false,
         writeAsBreadcrumbs: false,
       },
       markBackgroundTransactions: true,
       maxTransactionDuration: 600,
-      router: new TracingRouter({ ...routerDefaults, ..._options }),
       tracingOrigins: defaultTracingOrigins,
     };
     BrowserTracing.options = {

@@ -46,16 +46,18 @@ export interface TracingRouterOptions {
 }
 
 /** JSDOC */
-export interface RoutingInstrumentation<T> {
-  options: Partial<T>;
+export interface RoutingInstrumentation {
+  options: Partial<TracingRouterOptions>;
   /**
    * init the routing instrumentation
    */
   init(hub: Hub, idleTimeout: number): void;
 }
 
+export type RoutingInstrumentationClass = new (_options?: TracingRouterOptions) => RoutingInstrumentation;
+
 /** JSDOC */
-export class TracingRouter implements RoutingInstrumentation<TracingRouterOptions> {
+export class TracingRouter implements RoutingInstrumentation {
   /** JSDoc */
   public options: Partial<TracingRouterOptions> = {};
 
