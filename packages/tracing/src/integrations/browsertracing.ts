@@ -14,7 +14,21 @@ import {
 
 /**
  * TODO: Figure out Tracing._resetActiveTransaction()
+ *  - No clue :/
+ *  - Maybe on finish, all transactions should remove themselves off the scope?
  * TODO: Figure out Tracing.finishIdleTransaction()
+ *  - Need beforeFinish() transaction hook here
+ * TODO: Figure out both XHR and Fetch tracing
+ *  - This should be a integration that just runs automatically like the router
+ * TODO: _setupErrorHandling
+ *  - This should be a integration that runs automatically
+ * TODO: _setupBackgroundTabDetection
+ *  - This something that works automatically too
+ *  - This just cancels active pageload/navigation on scope
+ *  - Provide option to to extend to all transactions??
+ * TODO: Tracing._addPerformanceEntries
+ *  - This is a beforeFinish() hook here
+ * Thoughts:
  *  - This might be that we monkeypatch it here?
  *  - Ex. say _activeTransaction.finish = () => { finish() and something }
  *  - BrowserTracing wants to hook onto idleTransaction lifecyle, do something before and after
